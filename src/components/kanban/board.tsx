@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
 import { Column } from "./column";
-import { MobileBoard } from "./mobile-board";
 import { TaskDetailPanel } from "@/components/tasks/task-detail-panel";
 import type { TaskWithRelations, MemberWithUser, TaskStatus } from "@/types";
 import useSWR from "swr";
@@ -17,19 +16,6 @@ interface BoardProps {
 }
 
 export function Board({ projectId, initialTasks, members }: BoardProps) {
-  // Default to mobile (true) so SSR and first paint are mobile-first.
-  // After mount, check real viewport and update once.
-  const [isMobile, setIsMobile] = useState(true);
-
-  useEffect(() => {
-    // Use 1280px threshold: iOS Safari "Request Desktop Site" reports ~1024px,
-    // so 1024px breakpoint would incorrectly trigger desktop mode on iPhones.
-    const check = () => setIsMobile(window.innerWidth < 1280);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
   const { data: tasks = initialTasks, mutate } = useSWR<TaskWithRelations[]>(
     `/api/projects/${projectId}/tasks`,
     { fallbackData: initialTasks }
@@ -82,21 +68,14 @@ export function Board({ projectId, initialTasks, members }: BoardProps) {
     ? tasks.find((t) => t.id === selectedTask.id) ?? null
     : null;
 
-  // Render only ONE DragDropContext at a time — avoids iOS Safari conflicts.
-  if (isMobile) {
-    return (
-      <MobileBoard
-        projectId={projectId}
-        initialTasks={initialTasks}
-        members={members}
-      />
-    );
-  }
-
   return (
-    <div className="flex flex-col h-full">
+    <>
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-4 h-full">
+        {/*
+          Mobile: vertical stack of compact horizontal rows (flex-col, gap-1)
+          Desktop: horizontal columns side-by-side (md:flex-row, gap-4, overflow-x-auto)
+        */}
+        <div className="flex flex-col gap-1 md:flex-row md:gap-4 md:overflow-x-auto md:pb-4 md:h-full">
           {STATUSES.map((status) => (
             <Column
               key={status}
@@ -117,6 +96,6 @@ export function Board({ projectId, initialTasks, members }: BoardProps) {
         onClose={() => setSelectedTask(null)}
         onUpdate={handleTaskUpdated}
       />
-    </div>
+    </>
   );
 }

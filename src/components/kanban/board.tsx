@@ -3,8 +3,10 @@
 import { useState, useCallback } from "react";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
 import { Column } from "./column";
+import { MobileBoard } from "./mobile-board";
 import { TaskDetailPanel } from "@/components/tasks/task-detail-panel";
 import type { TaskWithRelations, MemberWithUser, TaskStatus } from "@/types";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import useSWR from "swr";
 
 const STATUSES: TaskStatus[] = ["TODO", "IN_PROGRESS", "REVIEW", "DONE"];
@@ -16,6 +18,8 @@ interface BoardProps {
 }
 
 export function Board({ projectId, initialTasks, members }: BoardProps) {
+  const isMobile = useIsMobile();
+
   const { data: tasks = initialTasks, mutate } = useSWR<TaskWithRelations[]>(
     `/api/projects/${projectId}/tasks`,
     { fallbackData: initialTasks }
@@ -40,7 +44,6 @@ export function Board({ projectId, initialTasks, members }: BoardProps) {
       const newStatus = destination.droppableId as TaskStatus;
       const newOrder = destination.index;
 
-      // Optimistic update
       mutate(
         (prev = []) => {
           const updated = prev.map((t) => {
@@ -68,11 +71,16 @@ export function Board({ projectId, initialTasks, members }: BoardProps) {
   const handleTaskAdded = useCallback(() => mutate(), [mutate]);
   const handleTaskUpdated = useCallback(() => mutate(), [mutate]);
 
-  // Update selected task when tasks change
   const selectedTaskUpdated = selectedTask
     ? tasks.find((t) => t.id === selectedTask.id) ?? null
     : null;
 
+  // Mobile: horizontal rows layout with its own DnD context
+  if (isMobile) {
+    return <MobileBoard projectId={projectId} initialTasks={initialTasks} members={members} />;
+  }
+
+  // Desktop: vertical columns
   return (
     <>
       <DragDropContext onDragEnd={handleDragEnd}>

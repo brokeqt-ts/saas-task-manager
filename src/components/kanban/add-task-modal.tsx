@@ -53,7 +53,9 @@ export function AddTaskModal({ projectId, members, onClose, onCreated }: AddTask
 
       {/* Modal — fullscreen on mobile, centered card on desktop */}
       <div
-        className="fixed z-50 bg-white flex flex-col overflow-hidden modal-fullscreen md:rounded-xl md:shadow-xl"
+        className="fixed inset-0 z-50 bg-white flex flex-col overflow-hidden
+          md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2
+          md:w-[480px] md:max-h-[90vh] md:rounded-xl md:shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
 

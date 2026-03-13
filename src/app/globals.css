@@ -7,13 +7,13 @@ body {
   overflow-x: hidden;
 }
 
-/* Scale down the entire UI on small screens to prevent horizontal scroll */
-@media (max-width: 767px) {
-  html {
-    zoom: 0.85;
-    -webkit-text-size-adjust: 100%;
+/* Prevent iOS Safari from zooming into form fields (triggers at font-size < 16px) */
+@media screen and (max-width: 767px) {
+  input, select, textarea {
+    font-size: 16px !important;
   }
 }
+
 
 @layer utilities {
   .text-balance {
@@ -24,22 +24,5 @@ body {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
-  }
-  /* Fullscreen modal on mobile using viewport units (bypasses zoom: 0.85) */
-  .modal-fullscreen {
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100dvh;
-  }
-  @media (min-width: 768px) {
-    .modal-fullscreen {
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 480px;
-      height: auto;
-      max-height: 90vh;
-    }
   }
 }

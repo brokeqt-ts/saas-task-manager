@@ -2,11 +2,19 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getOptionalUser } from "@/lib/auth-utils";
 
+// In-memory cache: only run checkDeadlines once per 5 min per user
+const checkCache = new Map<string, number>();
+const CHECK_INTERVAL_MS = 5 * 60 * 1000;
+
 export async function GET() {
   const user = await getOptionalUser();
   if (!user) return NextResponse.json([], { status: 401 });
 
-  await checkDeadlines(user.id);
+  const lastCheck = checkCache.get(user.id) ?? 0;
+  if (Date.now() - lastCheck > CHECK_INTERVAL_MS) {
+    checkCache.set(user.id, Date.now());
+    await checkDeadlines(user.id);
+  }
 
   const notifications = await prisma.notification.findMany({
     where: { userId: user.id },
@@ -21,7 +29,6 @@ export async function GET() {
 // The bucket tag is embedded in the message for deduplication.
 const BUCKETS = [
   {
-    // Already overdue
     tag: "[overdue]",
     match: (msLeft: number) => msLeft < 0,
     message: (title: string, msLeft: number) => {
@@ -31,11 +38,9 @@ const BUCKETS = [
         : `${Math.round(overMin / 60)} ч. назад`;
       return `🔴 [overdue] Просрочена задача: "${title}" (${text})`;
     },
-    // Repeat every 2 hours for overdue
     dedupWindowMs: 2 * 3600000,
   },
   {
-    // <= 2 hours left
     tag: "[2h]",
     match: (msLeft: number) => msLeft >= 0 && msLeft <= 2 * 3600000,
     message: (title: string, msLeft: number) => {
@@ -45,7 +50,6 @@ const BUCKETS = [
     dedupWindowMs: 1 * 3600000,
   },
   {
-    // <= 24 hours left
     tag: "[24h]",
     match: (msLeft: number) => msLeft > 2 * 3600000 && msLeft <= 24 * 3600000,
     message: (title: string, msLeft: number) => {
@@ -56,11 +60,13 @@ const BUCKETS = [
   },
 ];
 
+const MAX_DEDUP_WINDOW = Math.max(...BUCKETS.map((b) => b.dedupWindowMs));
+
 async function checkDeadlines(userId: string) {
   const now = new Date();
   const in24h = new Date(now.getTime() + 24 * 3600000);
 
-  // All non-done tasks of this user with deadline within 24h or overdue
+  // Fetch all relevant tasks
   const tasks = await prisma.task.findMany({
     where: {
       status: { not: "DONE" },
@@ -70,6 +76,30 @@ async function checkDeadlines(userId: string) {
     select: { id: true, title: true, deadline: true },
   });
 
+  if (tasks.length === 0) return;
+
+  // Fetch all recent deadline notifications for these tasks in ONE query
+  const since = new Date(now.getTime() - MAX_DEDUP_WINDOW);
+  const recentNotifs = await prisma.notification.findMany({
+    where: {
+      userId,
+      type: "DEADLINE_APPROACHING",
+      taskId: { in: tasks.map((t) => t.id) },
+      createdAt: { gte: since },
+    },
+    select: { taskId: true, message: true, createdAt: true },
+  });
+
+  // Group by taskId for quick lookup
+  const notifsByTask = new Map<string, { message: string; createdAt: Date }[]>();
+  for (const n of recentNotifs) {
+    if (!n.taskId) continue;
+    if (!notifsByTask.has(n.taskId)) notifsByTask.set(n.taskId, []);
+    notifsByTask.get(n.taskId)!.push({ message: n.message, createdAt: n.createdAt });
+  }
+
+  const toCreate: { type: "DEADLINE_APPROACHING"; message: string; userId: string; taskId: string }[] = [];
+
   for (const task of tasks) {
     if (!task.deadline) continue;
 
@@ -77,27 +107,23 @@ async function checkDeadlines(userId: string) {
     const bucket = BUCKETS.find((b) => b.match(msLeft));
     if (!bucket) continue;
 
-    // Deduplicate: skip if a notification with this bucket tag already exists recently
-    const since = new Date(now.getTime() - bucket.dedupWindowMs);
-    const existing = await prisma.notification.findFirst({
-      where: {
-        taskId: task.id,
-        type: "DEADLINE_APPROACHING",
-        userId,
-        message: { contains: bucket.tag },
-        createdAt: { gte: since },
-      },
-    });
-    if (existing) continue;
+    const dedupSince = new Date(now.getTime() - bucket.dedupWindowMs);
+    const taskNotifs = notifsByTask.get(task.id) ?? [];
+    const alreadySent = taskNotifs.some(
+      (n) => n.message.includes(bucket.tag) && n.createdAt >= dedupSince
+    );
+    if (alreadySent) continue;
 
-    await prisma.notification.create({
-      data: {
-        type: "DEADLINE_APPROACHING",
-        message: bucket.message(task.title, msLeft),
-        userId,
-        taskId: task.id,
-      },
+    toCreate.push({
+      type: "DEADLINE_APPROACHING",
+      message: bucket.message(task.title, msLeft),
+      userId,
+      taskId: task.id,
     });
+  }
+
+  if (toCreate.length > 0) {
+    await prisma.notification.createMany({ data: toCreate });
   }
 }
 

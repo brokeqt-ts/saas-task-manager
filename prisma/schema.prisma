@@ -102,6 +102,9 @@ model Notification {
   taskId    String?
 
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, type, taskId])
 }
 
 enum NotificationType {

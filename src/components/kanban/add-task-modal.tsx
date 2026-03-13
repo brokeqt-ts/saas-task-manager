@@ -52,10 +52,13 @@ export function AddTaskModal({ projectId, members, onClose, onCreated }: AddTask
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
 
-      {/* Modal: fullscreen on mobile, centered card on desktop */}
-      <div className="fixed inset-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg md:rounded-2xl bg-white z-50 flex flex-col md:max-h-[90vh] md:shadow-2xl">
+      {/* Modal: fullscreen on mobile (respecting safe areas), centered card on desktop */}
+      <div
+        className="fixed top-0 left-0 right-0 bottom-0 w-full max-w-full md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg md:rounded-2xl bg-white z-50 flex flex-col md:max-h-[90vh] md:shadow-2xl overflow-hidden"
+        style={{ maxHeight: "100dvh", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 flex-shrink-0" style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top, 0.75rem))" }}>
           <h2 className="text-base font-semibold text-gray-900">{t("task.newTask")}</h2>
           <button
             onClick={onClose}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd";
 import { Column } from "./column";
 import { MobileBoard } from "./mobile-board";
@@ -17,6 +17,17 @@ interface BoardProps {
 }
 
 export function Board({ projectId, initialTasks, members }: BoardProps) {
+  // Default to mobile (true) so SSR and first paint are mobile-first.
+  // After mount, check real viewport and update once.
+  const [isMobile, setIsMobile] = useState(true);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 1024);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   const { data: tasks = initialTasks, mutate } = useSWR<TaskWithRelations[]>(
     `/api/projects/${projectId}/tasks`,
     { fallbackData: initialTasks }
@@ -69,42 +80,41 @@ export function Board({ projectId, initialTasks, members }: BoardProps) {
     ? tasks.find((t) => t.id === selectedTask.id) ?? null
     : null;
 
+  // Render only ONE DragDropContext at a time — avoids iOS Safari conflicts.
+  if (isMobile) {
+    return (
+      <MobileBoard
+        projectId={projectId}
+        initialTasks={initialTasks}
+        members={members}
+      />
+    );
+  }
+
   return (
-    <>
-      {/* Mobile: horizontal rows — shown below lg breakpoint (< 1024px) */}
-      <div className="lg:hidden">
-        <MobileBoard
-          projectId={projectId}
-          initialTasks={initialTasks}
-          members={members}
-        />
-      </div>
+    <div className="flex flex-col h-full">
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="flex gap-4 overflow-x-auto pb-4 h-full">
+          {STATUSES.map((status) => (
+            <Column
+              key={status}
+              status={status}
+              tasks={tasksByStatus[status]}
+              projectId={projectId}
+              onTaskClick={setSelectedTask}
+              onTaskAdded={handleTaskAdded}
+            />
+          ))}
+        </div>
+      </DragDropContext>
 
-      {/* Desktop: vertical columns — shown on lg+ screens only */}
-      <div className="hidden lg:flex lg:flex-col h-full">
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="flex gap-4 overflow-x-auto pb-4 h-full">
-            {STATUSES.map((status) => (
-              <Column
-                key={status}
-                status={status}
-                tasks={tasksByStatus[status]}
-                projectId={projectId}
-                onTaskClick={setSelectedTask}
-                onTaskAdded={handleTaskAdded}
-              />
-            ))}
-          </div>
-        </DragDropContext>
-
-        <TaskDetailPanel
-          task={selectedTaskUpdated}
-          members={members}
-          projectId={projectId}
-          onClose={() => setSelectedTask(null)}
-          onUpdate={handleTaskUpdated}
-        />
-      </div>
-    </>
+      <TaskDetailPanel
+        task={selectedTaskUpdated}
+        members={members}
+        projectId={projectId}
+        onClose={() => setSelectedTask(null)}
+        onUpdate={handleTaskUpdated}
+      />
+    </div>
   );
 }

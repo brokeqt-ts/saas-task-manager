@@ -4,6 +4,15 @@
 
 body {
   background: #f9fafb;
+  overflow-x: hidden;
+}
+
+/* Scale down the entire UI on small screens to prevent horizontal scroll */
+@media (max-width: 767px) {
+  html {
+    zoom: 0.85;
+    -webkit-text-size-adjust: 100%;
+  }
 }
 
 @layer utilities {

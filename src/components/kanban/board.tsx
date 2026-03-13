@@ -6,7 +6,6 @@ import { Column } from "./column";
 import { MobileBoard } from "./mobile-board";
 import { TaskDetailPanel } from "@/components/tasks/task-detail-panel";
 import type { TaskWithRelations, MemberWithUser, TaskStatus } from "@/types";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import useSWR from "swr";
 
 const STATUSES: TaskStatus[] = ["TODO", "IN_PROGRESS", "REVIEW", "DONE"];
@@ -18,8 +17,6 @@ interface BoardProps {
 }
 
 export function Board({ projectId, initialTasks, members }: BoardProps) {
-  const isMobile = useIsMobile();
-
   const { data: tasks = initialTasks, mutate } = useSWR<TaskWithRelations[]>(
     `/api/projects/${projectId}/tasks`,
     { fallbackData: initialTasks }
@@ -45,13 +42,10 @@ export function Board({ projectId, initialTasks, members }: BoardProps) {
       const newOrder = destination.index;
 
       mutate(
-        (prev = []) => {
-          const updated = prev.map((t) => {
-            if (t.id === draggableId) return { ...t, status: newStatus, order: newOrder };
-            return t;
-          });
-          return updated;
-        },
+        (prev = []) =>
+          prev.map((t) =>
+            t.id === draggableId ? { ...t, status: newStatus, order: newOrder } : t
+          ),
         { revalidate: false }
       );
 
@@ -75,36 +69,42 @@ export function Board({ projectId, initialTasks, members }: BoardProps) {
     ? tasks.find((t) => t.id === selectedTask.id) ?? null
     : null;
 
-  // Mobile: horizontal rows layout with its own DnD context
-  if (isMobile) {
-    return <MobileBoard projectId={projectId} initialTasks={initialTasks} members={members} />;
-  }
-
-  // Desktop: vertical columns
   return (
     <>
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-4 h-full">
-          {STATUSES.map((status) => (
-            <Column
-              key={status}
-              status={status}
-              tasks={tasksByStatus[status]}
-              projectId={projectId}
-              onTaskClick={setSelectedTask}
-              onTaskAdded={handleTaskAdded}
-            />
-          ))}
-        </div>
-      </DragDropContext>
+      {/* Mobile: horizontal rows — always rendered, hidden on md+ via CSS */}
+      <div className="md:hidden h-full">
+        <MobileBoard
+          projectId={projectId}
+          initialTasks={initialTasks}
+          members={members}
+        />
+      </div>
 
-      <TaskDetailPanel
-        task={selectedTaskUpdated}
-        members={members}
-        projectId={projectId}
-        onClose={() => setSelectedTask(null)}
-        onUpdate={handleTaskUpdated}
-      />
+      {/* Desktop: vertical columns — hidden on mobile via CSS */}
+      <div className="hidden md:flex md:flex-col md:h-full">
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="flex gap-4 overflow-x-auto pb-4 h-full">
+            {STATUSES.map((status) => (
+              <Column
+                key={status}
+                status={status}
+                tasks={tasksByStatus[status]}
+                projectId={projectId}
+                onTaskClick={setSelectedTask}
+                onTaskAdded={handleTaskAdded}
+              />
+            ))}
+          </div>
+        </DragDropContext>
+
+        <TaskDetailPanel
+          task={selectedTaskUpdated}
+          members={members}
+          projectId={projectId}
+          onClose={() => setSelectedTask(null)}
+          onUpdate={handleTaskUpdated}
+        />
+      </div>
     </>
   );
 }

@@ -25,8 +25,7 @@ export function AddTaskModal({ projectId, members, onClose, onCreated }: AddTask
   const [deadline, setDeadline] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     if (!title.trim()) return;
 
     setLoading(true);
@@ -52,26 +51,27 @@ export function AddTaskModal({ projectId, members, onClose, onCreated }: AddTask
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
 
-      {/* Modal: fullscreen on mobile (respecting safe areas), centered card on desktop */}
+      {/* Modal — fullscreen on mobile, centered card on desktop */}
       <div
-        className="fixed top-0 left-0 right-0 bottom-0 w-full max-w-full md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg md:rounded-2xl bg-white z-50 flex flex-col md:max-h-[90vh] md:shadow-2xl overflow-hidden"
-        style={{ maxHeight: "100dvh", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+        className="fixed z-50 bg-white flex flex-col overflow-hidden modal-fullscreen md:rounded-xl md:shadow-xl"
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 flex-shrink-0" style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top, 0.75rem))" }}>
-          <h2 className="text-base font-semibold text-gray-900">{t("task.newTask")}</h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors rounded-lg hover:bg-gray-100"
-          >
-            <XMarkIcon className="w-5 h-5" />
-          </button>
-        </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4">
+          {/* Header row: title + close button */}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">{t("task.newTask")}</h2>
+            <button
+              onClick={onClose}
+              className="p-2 -mr-2 text-gray-400 active:text-gray-600 active:bg-gray-100 rounded-lg"
+            >
+              <XMarkIcon className="w-6 h-6" />
+            </button>
+          </div>
+
           {/* Title */}
-          <div>
+          <div className="mb-3">
             <label className="block text-xs font-medium text-gray-500 mb-1">{t("task.titleLabel")}</label>
             <input
               autoFocus
@@ -79,30 +79,30 @@ export function AddTaskModal({ projectId, members, onClose, onCreated }: AddTask
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t("task.namePlaceholder")}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Description */}
-          <div>
+          <div className="mb-3">
             <label className="block text-xs font-medium text-gray-500 mb-1">{t("task.description")}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={3}
+              rows={2}
               placeholder={t("task.descriptionPlaceholder")}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
           </div>
 
           {/* Status + Priority */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">{t("task.status")}</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 {statuses.map((s) => (
                   <option key={s} value={s}>{t(`status.${s}`)}</option>
@@ -114,7 +114,7 @@ export function AddTaskModal({ projectId, members, onClose, onCreated }: AddTask
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as Priority)}
-                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 {priorities.map((p) => (
                   <option key={p} value={p}>{t(`priority.${p}`)}</option>
@@ -124,12 +124,12 @@ export function AddTaskModal({ projectId, members, onClose, onCreated }: AddTask
           </div>
 
           {/* Assignee */}
-          <div>
+          <div className="mb-3">
             <label className="block text-xs font-medium text-gray-500 mb-1">{t("task.assignee")}</label>
             <select
               value={assigneeId}
               onChange={(e) => setAssigneeId(e.target.value)}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               <option value="">{t("task.unassigned")}</option>
               {members.map((m) => (
@@ -139,30 +139,23 @@ export function AddTaskModal({ projectId, members, onClose, onCreated }: AddTask
           </div>
 
           {/* Deadline */}
-          <div>
+          <div className="mb-3">
             <label className="block text-xs font-medium text-gray-500 mb-1">{t("task.deadline")}</label>
             <input
               type="datetime-local"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-        </form>
+        </div>
 
-        {/* Footer buttons */}
-        <div className="flex items-center gap-3 px-5 py-4 border-t border-gray-100 flex-shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg py-2.5 transition-colors"
-          >
-            {t("task.cancel")}
-          </button>
+        {/* Fixed bottom button */}
+        <div className="flex-shrink-0 px-4 py-3 border-t border-gray-100 bg-white">
           <button
             onClick={handleSubmit}
             disabled={loading || !title.trim()}
-            className="flex-1 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 rounded-lg py-2.5 transition-colors"
+            className="w-full text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-blue-300 rounded-lg py-3 transition-colors"
           >
             {loading ? t("task.creating") : t("task.createTask")}
           </button>

@@ -22,7 +22,9 @@ export function Board({ projectId, initialTasks, members }: BoardProps) {
   const [isMobile, setIsMobile] = useState(true);
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 1024);
+    // Use 1280px threshold: iOS Safari "Request Desktop Site" reports ~1024px,
+    // so 1024px breakpoint would incorrectly trigger desktop mode on iPhones.
+    const check = () => setIsMobile(window.innerWidth < 1280);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);

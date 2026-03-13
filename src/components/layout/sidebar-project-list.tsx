@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { CreateProjectButton } from "@/components/projects/create-project-button";
+import { useSidebar } from "./sidebar-context";
 
 interface Project {
   id: string;
@@ -12,6 +13,7 @@ interface Project {
 
 export function SidebarProjectList({ projects }: { projects: Project[] }) {
   const pathname = usePathname();
+  const { close } = useSidebar();
 
   return (
     <div className="space-y-0.5">
@@ -19,6 +21,7 @@ export function SidebarProjectList({ projects }: { projects: Project[] }) {
         <Link
           key={p.id}
           href={`/projects/${p.id}`}
+          onClick={close}
           className={cn(
             "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors",
             pathname === `/projects/${p.id}`

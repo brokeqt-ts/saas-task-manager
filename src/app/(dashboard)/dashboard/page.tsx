@@ -54,7 +54,7 @@ export default async function DashboardPage() {
   return (
     <>
       <Header title={t(locale, "dashboard.title")} />
-      <main className="p-6 space-y-6">
+      <main className="p-3 md:p-6 space-y-4 md:space-y-6">
         <StatsCards
           totalTasks={totalTasks}
           overdueTasks={overdueTasks.length}

@@ -41,7 +41,7 @@ export default async function ProjectPage({ params }: { params: { projectId: str
   return (
     <>
       <Header title={project.name} />
-      <main className="p-6 h-[calc(100vh-3.5rem)] flex flex-col">
+      <main className="p-3 md:p-6 h-[calc(100vh-3.5rem)] flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">{project.name}</h2>

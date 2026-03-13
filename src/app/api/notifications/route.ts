@@ -33,9 +33,8 @@ const BUCKETS = [
     match: (msLeft: number) => msLeft < 0,
     message: (title: string, msLeft: number) => {
       const overMin = Math.round(-msLeft / 60000);
-      const text = overMin < 60
-        ? `${overMin} мин. назад`
-        : `${Math.round(overMin / 60)} ч. назад`;
+      const text =
+        overMin < 60 ? `${overMin} мин. назад` : `${Math.round(overMin / 60)} ч. назад`;
       return `🔴 [overdue] Просрочена задача: "${title}" (${text})`;
     },
     dedupWindowMs: 2 * 3600000,
@@ -66,39 +65,59 @@ async function checkDeadlines(userId: string) {
   const now = new Date();
   const in24h = new Date(now.getTime() + 24 * 3600000);
 
-  // Fetch all relevant tasks
+  // Find tasks where this user is creator or assignee, and include both user IDs
   const tasks = await prisma.task.findMany({
     where: {
       status: { not: "DONE" },
       deadline: { not: null, lte: in24h },
       OR: [{ assigneeId: userId }, { creatorId: userId }],
     },
-    select: { id: true, title: true, deadline: true },
+    select: { id: true, title: true, deadline: true, assigneeId: true, creatorId: true },
   });
 
   if (tasks.length === 0) return;
 
-  // Fetch all recent deadline notifications for these tasks in ONE query
+  // Collect all unique recipient IDs (creator + assignee for every task)
+  const allRecipientIds: string[] = [];
+  const seenIds = new Set<string>();
+  for (const task of tasks) {
+    if (!seenIds.has(task.creatorId)) {
+      seenIds.add(task.creatorId);
+      allRecipientIds.push(task.creatorId);
+    }
+    if (task.assigneeId && !seenIds.has(task.assigneeId)) {
+      seenIds.add(task.assigneeId);
+      allRecipientIds.push(task.assigneeId);
+    }
+  }
+
+  // Fetch all recent deadline notifications for these tasks + recipients in ONE query
   const since = new Date(now.getTime() - MAX_DEDUP_WINDOW);
   const recentNotifs = await prisma.notification.findMany({
     where: {
-      userId,
+      userId: { in: Array.from(allRecipientIds) },
       type: "DEADLINE_APPROACHING",
       taskId: { in: tasks.map((t) => t.id) },
       createdAt: { gte: since },
     },
-    select: { taskId: true, message: true, createdAt: true },
+    select: { taskId: true, userId: true, message: true, createdAt: true },
   });
 
-  // Group by taskId for quick lookup
-  const notifsByTask = new Map<string, { message: string; createdAt: Date }[]>();
+  // Group by "taskId:userId" for fast lookup
+  const notifsByKey = new Map<string, { message: string; createdAt: Date }[]>();
   for (const n of recentNotifs) {
     if (!n.taskId) continue;
-    if (!notifsByTask.has(n.taskId)) notifsByTask.set(n.taskId, []);
-    notifsByTask.get(n.taskId)!.push({ message: n.message, createdAt: n.createdAt });
+    const key = `${n.taskId}:${n.userId}`;
+    if (!notifsByKey.has(key)) notifsByKey.set(key, []);
+    notifsByKey.get(key)!.push({ message: n.message, createdAt: n.createdAt });
   }
 
-  const toCreate: { type: "DEADLINE_APPROACHING"; message: string; userId: string; taskId: string }[] = [];
+  const toCreate: {
+    type: "DEADLINE_APPROACHING";
+    message: string;
+    userId: string;
+    taskId: string;
+  }[] = [];
 
   for (const task of tasks) {
     if (!task.deadline) continue;
@@ -108,18 +127,28 @@ async function checkDeadlines(userId: string) {
     if (!bucket) continue;
 
     const dedupSince = new Date(now.getTime() - bucket.dedupWindowMs);
-    const taskNotifs = notifsByTask.get(task.id) ?? [];
-    const alreadySent = taskNotifs.some(
-      (n) => n.message.includes(bucket.tag) && n.createdAt >= dedupSince
-    );
-    if (alreadySent) continue;
 
-    toCreate.push({
-      type: "DEADLINE_APPROACHING",
-      message: bucket.message(task.title, msLeft),
-      userId,
-      taskId: task.id,
-    });
+    // Notify BOTH creator and assignee
+    const recipients: string[] = [task.creatorId];
+    if (task.assigneeId && task.assigneeId !== task.creatorId) {
+      recipients.push(task.assigneeId);
+    }
+
+    for (const recipientId of recipients) {
+      const key = `${task.id}:${recipientId}`;
+      const taskNotifs = notifsByKey.get(key) ?? [];
+      const alreadySent = taskNotifs.some(
+        (n) => n.message.includes(bucket.tag) && n.createdAt >= dedupSince
+      );
+      if (alreadySent) continue;
+
+      toCreate.push({
+        type: "DEADLINE_APPROACHING",
+        message: bucket.message(task.title, msLeft),
+        userId: recipientId,
+        taskId: task.id,
+      });
+    }
   }
 
   if (toCreate.length > 0) {

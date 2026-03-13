@@ -41,7 +41,8 @@ export default async function ProjectPage({ params }: { params: { projectId: str
   return (
     <>
       <Header title={project.name} />
-      <main className="p-3 md:p-6 h-[calc(100vh-3.5rem)] flex flex-col">
+      {/* Mobile: natural scroll layout */}
+      <main className="p-3 md:p-6 lg:h-[calc(100vh-3.5rem)] lg:flex lg:flex-col">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">{project.name}</h2>
@@ -59,7 +60,7 @@ export default async function ProjectPage({ params }: { params: { projectId: str
             </Link>
           )}
         </div>
-        <div className="flex-1 overflow-hidden">
+        <div className="lg:flex-1 lg:overflow-hidden">
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <Board projectId={params.projectId} initialTasks={tasks as any} members={members as any} />
         </div>

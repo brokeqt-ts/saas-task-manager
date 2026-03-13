@@ -71,8 +71,8 @@ export function Board({ projectId, initialTasks, members }: BoardProps) {
 
   return (
     <>
-      {/* Mobile: horizontal rows — always rendered, hidden on md+ via CSS */}
-      <div className="md:hidden h-full">
+      {/* Mobile: horizontal rows — shown below lg breakpoint (< 1024px) */}
+      <div className="lg:hidden">
         <MobileBoard
           projectId={projectId}
           initialTasks={initialTasks}
@@ -80,8 +80,8 @@ export function Board({ projectId, initialTasks, members }: BoardProps) {
         />
       </div>
 
-      {/* Desktop: vertical columns — hidden on mobile via CSS */}
-      <div className="hidden md:flex md:flex-col md:h-full">
+      {/* Desktop: vertical columns — shown on lg+ screens only */}
+      <div className="hidden lg:flex lg:flex-col h-full">
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="flex gap-4 overflow-x-auto pb-4 h-full">
             {STATUSES.map((status) => (

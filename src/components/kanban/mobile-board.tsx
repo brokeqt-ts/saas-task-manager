@@ -99,7 +99,7 @@ export function MobileBoard({ projectId, initialTasks, members }: MobileBoardPro
   return (
     <>
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="flex flex-col gap-2 h-full overflow-y-auto">
+        <div className="flex flex-col gap-2">
           {STATUSES.map((status) => {
             const statusTasks = tasksByStatus[status];
             return (

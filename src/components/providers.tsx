@@ -16,7 +16,7 @@ export function Providers({
 }) {
   return (
     <SessionProvider>
-      <SWRConfig value={{ fetcher, revalidateOnFocus: false, dedupingInterval: 5000 }}>
+      <SWRConfig value={{ fetcher, revalidateOnFocus: true, dedupingInterval: 5000 }}>
         <LanguageProvider locale={locale}>{children}</LanguageProvider>
       </SWRConfig>
     </SessionProvider>

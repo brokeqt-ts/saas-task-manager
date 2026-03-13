@@ -22,7 +22,7 @@ export function Board({ projectId, initialTasks, members }: BoardProps) {
   const { t } = useLocale();
   const { data: tasks = initialTasks, mutate } = useSWR<TaskWithRelations[]>(
     `/api/projects/${projectId}/tasks`,
-    { fallbackData: initialTasks }
+    { fallbackData: initialTasks, refreshInterval: 30000 }
   );
 
   const [selectedTask, setSelectedTask] = useState<TaskWithRelations | null>(null);

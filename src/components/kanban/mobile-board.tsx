@@ -1,21 +1,29 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { DragDropContext, Droppable, type DropResult } from "@hello-pangea/dnd";
-import { MobileTaskCard } from "./mobile-task-card";
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 import { TaskDetailPanel } from "@/components/tasks/task-detail-panel";
-import { PlusIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, CalendarIcon } from "@heroicons/react/24/outline";
+import { Avatar } from "@/components/ui/avatar";
 import type { TaskWithRelations, MemberWithUser, TaskStatus } from "@/types";
 import { useLocale } from "@/components/providers/language-provider";
+import { formatDate, isOverdue } from "@/lib/utils";
 import useSWR from "swr";
 
 const STATUSES: TaskStatus[] = ["TODO", "IN_PROGRESS", "REVIEW", "DONE"];
 
 const ROW_COLORS: Record<TaskStatus, string> = {
-  TODO: "bg-gray-400",
-  IN_PROGRESS: "bg-blue-500",
-  REVIEW: "bg-yellow-400",
-  DONE: "bg-green-500",
+  TODO: "border-l-gray-400",
+  IN_PROGRESS: "border-l-blue-500",
+  REVIEW: "border-l-yellow-400",
+  DONE: "border-l-green-500",
+};
+
+const PRIORITY_DOT: Record<string, string> = {
+  LOW: "bg-gray-300",
+  MEDIUM: "bg-blue-400",
+  HIGH: "bg-orange-400",
+  URGENT: "bg-red-500",
 };
 
 interface MobileBoardProps {
@@ -99,18 +107,20 @@ export function MobileBoard({ projectId, initialTasks, members }: MobileBoardPro
   return (
     <>
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-1">
           {STATUSES.map((status) => {
             const statusTasks = tasksByStatus[status];
             return (
-              <div key={status} className="flex-shrink-0">
-                {/* Row header */}
-                <div className="flex items-center gap-2 px-1 mb-1.5">
-                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${ROW_COLORS[status]}`} />
-                  <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+              <div
+                key={status}
+                className={`border-l-4 ${ROW_COLORS[status]} bg-white rounded-r-lg`}
+              >
+                {/* Row header — compact single line */}
+                <div className="flex items-center gap-2 px-3 py-1.5">
+                  <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">
                     {t(`status.${status}`)}
                   </span>
-                  <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-1.5 py-0.5 font-medium">
+                  <span className="text-[10px] text-gray-400 font-medium">
                     {statusTasks.length}
                   </span>
                   <div className="flex-1" />
@@ -119,38 +129,73 @@ export function MobileBoard({ projectId, initialTasks, members }: MobileBoardPro
                       setAddingStatus(status);
                       setNewTitle("");
                     }}
-                    className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                    className="p-0.5 text-gray-400 active:text-gray-600 active:bg-gray-100 rounded"
                   >
-                    <PlusIcon className="w-4 h-4" />
+                    <PlusIcon className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
-                {/* Horizontally scrollable task row */}
+                {/* Horizontally scrollable task chips */}
                 <Droppable droppableId={status} direction="horizontal">
                   {(provided, snapshot) => (
                     <div
                       ref={provided.innerRef}
                       {...provided.droppableProps}
                       className={`
-                        flex gap-2 px-1 pb-1 overflow-x-auto
-                        min-h-[84px] rounded-lg transition-colors
-                        ${snapshot.isDraggingOver ? "bg-blue-50" : "bg-gray-50/60"}
+                        flex gap-1.5 px-3 pb-2 overflow-x-auto items-start
+                        min-h-[44px] transition-colors
+                        ${snapshot.isDraggingOver ? "bg-blue-50/80" : ""}
                       `}
-                      style={{ scrollbarWidth: "none" }}
+                      style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
                     >
-                      {statusTasks.map((task, index) => (
-                        <MobileTaskCard
-                          key={task.id}
-                          task={task}
-                          index={index}
-                          onClick={setSelectedTask}
-                        />
-                      ))}
+                      {statusTasks.map((task, index) => {
+                        const overdue = isOverdue(task.deadline) && task.status !== "DONE";
+                        return (
+                          <Draggable key={task.id} draggableId={task.id} index={index}>
+                            {(dragProvided, dragSnapshot) => (
+                              <div
+                                ref={dragProvided.innerRef}
+                                {...dragProvided.draggableProps}
+                                {...dragProvided.dragHandleProps}
+                                onClick={() => setSelectedTask(task)}
+                                className={`
+                                  flex-shrink-0 bg-gray-50 border border-gray-200 rounded-md
+                                  px-2 py-1.5 select-none cursor-pointer
+                                  flex items-center gap-1.5
+                                  max-w-[180px]
+                                  ${dragSnapshot.isDragging ? "shadow-md opacity-90 bg-white" : ""}
+                                `}
+                                style={dragProvided.draggableProps.style}
+                              >
+                                {/* Priority dot */}
+                                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${PRIORITY_DOT[task.priority]}`} />
+                                {/* Title */}
+                                <span className="text-[11px] text-gray-800 font-medium truncate">
+                                  {task.title}
+                                </span>
+                                {/* Deadline if any */}
+                                {task.deadline && (
+                                  <span className={`flex items-center gap-0.5 text-[9px] flex-shrink-0 ${overdue ? "text-red-500 font-bold" : "text-gray-400"}`}>
+                                    <CalendarIcon className="w-2.5 h-2.5" />
+                                    {formatDate(task.deadline)}
+                                  </span>
+                                )}
+                                {/* Assignee */}
+                                {task.assignee && (
+                                  <div className="flex-shrink-0">
+                                    <Avatar name={task.assignee.name} size="xs" />
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </Draggable>
+                        );
+                      })}
                       {provided.placeholder}
 
                       {/* Inline add */}
                       {addingStatus === status && (
-                        <div className="w-32 flex-shrink-0 flex items-start pt-1">
+                        <div className="flex-shrink-0 flex items-center">
                           <input
                             autoFocus
                             type="text"
@@ -165,7 +210,7 @@ export function MobileBoard({ projectId, initialTasks, members }: MobileBoardPro
                             }}
                             onBlur={() => handleAddTask(status)}
                             placeholder={t("task.namePlaceholder")}
-                            className="w-full text-[11px] px-2 py-1.5 border border-blue-400 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                            className="w-28 text-[11px] px-2 py-1 border border-blue-400 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
                           />
                         </div>
                       )}

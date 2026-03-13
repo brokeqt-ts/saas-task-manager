@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/avatar";
 import type { MemberWithUser } from "@/types";
 import { TrashIcon } from "@heroicons/react/24/outline";
@@ -10,6 +10,7 @@ import { useLocale } from "@/components/providers/language-provider";
 
 export default function SettingsPage() {
   const params = useParams();
+  const router = useRouter();
   const projectId = params.projectId as string;
   const { t } = useLocale();
 
@@ -17,6 +18,7 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   async function addMember(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +48,19 @@ export default function SettingsPage() {
       body: JSON.stringify({ userId }),
     });
     mutate();
+  }
+
+  async function deleteProject() {
+    if (!confirm(t("project.deleteConfirm"))) return;
+    setDeleting(true);
+    const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+    if (res.ok) {
+      router.push("/dashboard");
+    } else {
+      const data = await res.json();
+      setError(data.error ?? t("settings.error"));
+      setDeleting(false);
+    }
   }
 
   return (
@@ -93,6 +108,22 @@ export default function SettingsPage() {
           </div>
         ))}
       </div>
+
+      {/* Delete project — only visible to owner */}
+      {members.some((m) => m.role === "OWNER") && (
+        <div className="mt-10 pt-6 border-t border-gray-200">
+          <h2 className="text-sm font-semibold text-red-600 mb-2">{t("project.dangerZone")}</h2>
+          <p className="text-xs text-gray-500 mb-3">{t("project.deleteWarning")}</p>
+          <button
+            onClick={deleteProject}
+            disabled={deleting}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 rounded-lg transition-colors"
+          >
+            <TrashIcon className="w-4 h-4" />
+            {deleting ? t("project.deleting") : t("project.delete")}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

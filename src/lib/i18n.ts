@@ -102,6 +102,11 @@ const en: Translations = {
   "project.cancel": "Cancel",
   "project.create": "Create",
   "project.creating": "Creating...",
+  "project.dangerZone": "Danger Zone",
+  "project.deleteWarning": "This will permanently delete the project and all its tasks. This action cannot be undone.",
+  "project.delete": "Delete Project",
+  "project.deleting": "Deleting...",
+  "project.deleteConfirm": "Are you sure you want to delete this project? All tasks will be lost.",
 
   // Notifications
   "notifications.title": "Notifications",
@@ -218,6 +223,11 @@ const ru: Translations = {
   "project.cancel": "Отмена",
   "project.create": "Создать",
   "project.creating": "Создаём...",
+  "project.dangerZone": "Опасная зона",
+  "project.deleteWarning": "Проект и все его задачи будут удалены навсегда. Это действие нельзя отменить.",
+  "project.delete": "Удалить проект",
+  "project.deleting": "Удаляем...",
+  "project.deleteConfirm": "Вы уверены, что хотите удалить проект? Все задачи будут потеряны.",
 
   // Notifications
   "notifications.title": "Уведомления",

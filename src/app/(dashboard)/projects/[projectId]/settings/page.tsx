@@ -18,7 +18,6 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [deleting, setDeleting] = useState(false);
 
   async function addMember(e: React.FormEvent) {
     e.preventDefault();
@@ -50,17 +49,11 @@ export default function SettingsPage() {
     mutate();
   }
 
-  async function deleteProject() {
+  function deleteProject() {
     if (!confirm(t("project.deleteConfirm"))) return;
-    setDeleting(true);
-    const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
-    if (res.ok) {
-      router.push("/dashboard");
-    } else {
-      const data = await res.json();
-      setError(data.error ?? t("settings.error"));
-      setDeleting(false);
-    }
+    // Navigate immediately, delete in background
+    router.push("/dashboard");
+    fetch(`/api/projects/${projectId}`, { method: "DELETE" });
   }
 
   return (
@@ -116,11 +109,10 @@ export default function SettingsPage() {
           <p className="text-xs text-gray-500 mb-3">{t("project.deleteWarning")}</p>
           <button
             onClick={deleteProject}
-            disabled={deleting}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-60 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
           >
             <TrashIcon className="w-4 h-4" />
-            {deleting ? t("project.deleting") : t("project.delete")}
+            {t("project.delete")}
           </button>
         </div>
       )}

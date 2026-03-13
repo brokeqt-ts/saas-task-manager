@@ -60,6 +60,11 @@ const en: Translations = {
   // Kanban
   "task.add": "Add task",
   "task.namePlaceholder": "Task name...",
+  "task.newTask": "New Task",
+  "task.titleLabel": "Title",
+  "task.createTask": "Create",
+  "task.creating": "Creating...",
+  "task.cancel": "Cancel",
 
   // Task detail panel
   "task.details": "Task Details",
@@ -171,6 +176,11 @@ const ru: Translations = {
   // Kanban
   "task.add": "Добавить задачу",
   "task.namePlaceholder": "Название задачи...",
+  "task.newTask": "Новая задача",
+  "task.titleLabel": "Название",
+  "task.createTask": "Создать",
+  "task.creating": "Создаём...",
+  "task.cancel": "Отмена",
 
   // Task detail panel
   "task.details": "Детали задачи",

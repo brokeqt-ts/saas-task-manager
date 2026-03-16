@@ -8,12 +8,11 @@ import type { TaskWithRelations, MemberWithUser } from "@/types";
 export default async function ProjectPage({ params }: { params: { projectId: string } }) {
   const user = await getCurrentUser();
 
-  const member = await prisma.projectMember.findUnique({
-    where: { userId_projectId: { userId: user.id, projectId: params.projectId } },
-  });
-  if (!member) notFound();
-
-  const [project, tasks, members] = await Promise.all([
+  // All queries in parallel — don't wait for member check before fetching data
+  const [member, project, tasks, members] = await Promise.all([
+    prisma.projectMember.findUnique({
+      where: { userId_projectId: { userId: user.id, projectId: params.projectId } },
+    }),
     prisma.project.findUnique({
       where: { id: params.projectId },
       select: { id: true, name: true },
@@ -32,7 +31,7 @@ export default async function ProjectPage({ params }: { params: { projectId: str
     }),
   ]);
 
-  if (!project) notFound();
+  if (!member || !project) notFound();
 
   return (
     <>

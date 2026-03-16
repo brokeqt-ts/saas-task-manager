@@ -124,10 +124,28 @@ export async function PATCH(req: Request, { params }: { params: { projectId: str
   if (assigneeChanged && updatedTask.assigneeId && updatedTask.assigneeId !== user.id) {
     notificationsToCreate.push({
       type: "TASK_ASSIGNED" as const,
-      message: `Вам назначена задача: ${updatedTask.title}`,
+      message: `Вам назначена задача: "${updatedTask.title}"`,
       userId: updatedTask.assigneeId,
       taskId: updatedTask.id,
     });
+
+    // If the task has a near deadline, also notify the new assignee
+    if (updatedTask.deadline) {
+      const msLeft = updatedTask.deadline.getTime() - Date.now();
+      if (msLeft > 0 && msLeft <= 24 * 3600000) {
+        const tag = msLeft <= 2 * 3600000 ? "[2h]" : "[24h]";
+        const timeText = msLeft <= 2 * 3600000
+          ? `${Math.round(msLeft / 60000)} мин.`
+          : `~${Math.round(msLeft / 3600000)} ч.`;
+        const emoji = msLeft <= 2 * 3600000 ? "🔔" : "⏰";
+        notificationsToCreate.push({
+          type: "DEADLINE_APPROACHING" as const,
+          message: `${emoji} ${tag} До дедлайна "${updatedTask.title}" осталось ${timeText}`,
+          userId: updatedTask.assigneeId,
+          taskId: updatedTask.id,
+        });
+      }
+    }
   }
 
   if (statusChanged && updatedTask.assigneeId && updatedTask.assigneeId !== user.id) {

@@ -13,7 +13,12 @@ export async function GET() {
   const lastCheck = checkCache.get(user.id) ?? 0;
   if (Date.now() - lastCheck > CHECK_INTERVAL_MS) {
     checkCache.set(user.id, Date.now());
-    await checkDeadlines(user.id);
+    try {
+      await checkDeadlines(user.id);
+    } catch (e) {
+      console.error("[notifications] checkDeadlines error:", e);
+      // Don't let deadline check failure block fetching existing notifications
+    }
   }
 
   const notifications = await prisma.notification.findMany({
@@ -64,12 +69,14 @@ const MAX_DEDUP_WINDOW = Math.max(...BUCKETS.map((b) => b.dedupWindowMs));
 async function checkDeadlines(userId: string) {
   const now = new Date();
   const in24h = new Date(now.getTime() + 24 * 3600000);
+  // Don't generate notifications for tasks overdue by more than 48 hours
+  const maxOverdue = new Date(now.getTime() - 48 * 3600000);
 
   // Find tasks where this user is creator or assignee, and include both user IDs
   const tasks = await prisma.task.findMany({
     where: {
       status: { not: "DONE" },
-      deadline: { not: null, lte: in24h },
+      deadline: { not: null, gte: maxOverdue, lte: in24h },
       OR: [{ assigneeId: userId }, { creatorId: userId }],
     },
     select: { id: true, title: true, deadline: true, assigneeId: true, creatorId: true },

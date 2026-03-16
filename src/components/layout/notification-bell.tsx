@@ -34,7 +34,7 @@ export function NotificationBell() {
   const { data: notifications = [], mutate } = useSWR<NotificationItem[]>(
     "/api/notifications",
     {
-      refreshInterval: 60000,
+      refreshInterval: 30000,
       onSuccess(data) {
         const newUnread = data.filter((n) => !n.read).length;
         // prevUnreadRef starts at -1: first fetch just records the baseline, no sound

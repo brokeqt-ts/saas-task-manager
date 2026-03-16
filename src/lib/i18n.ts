@@ -118,6 +118,7 @@ const en: Translations = {
   "notif.DEADLINE_APPROACHING": "⏰ Deadline approaching",
   "notif.TASK_ASSIGNED": "📋 Task assigned",
   "notif.TASK_STATUS_CHANGED": "🔄 Status changed",
+  "notif.COMMENT_ADDED": "💬 New comment",
 
   // My Tasks
   "nav.myTasks": "My Tasks",
@@ -274,6 +275,7 @@ const ru: Translations = {
   "notif.DEADLINE_APPROACHING": "⏰ Дедлайн приближается",
   "notif.TASK_ASSIGNED": "📋 Назначена задача",
   "notif.TASK_STATUS_CHANGED": "🔄 Статус изменён",
+  "notif.COMMENT_ADDED": "💬 Новый комментарий",
 
   // My Tasks
   "nav.myTasks": "Мои задачи",

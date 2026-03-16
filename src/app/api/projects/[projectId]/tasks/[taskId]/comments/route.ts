@@ -29,15 +29,33 @@ export async function POST(req: Request, { params }: { params: { projectId: stri
   const { text } = await req.json();
   if (!text?.trim()) return NextResponse.json({ error: "Text required" }, { status: 400 });
 
-  const comment = await prisma.comment.create({
-    data: {
-      text: text.trim(),
-      userId: user.id,
-      taskId: params.taskId,
-      projectId: params.projectId,
-    },
-    include: { user: { select: { id: true, name: true, email: true } } },
-  });
+  const [comment, task] = await Promise.all([
+    prisma.comment.create({
+      data: {
+        text: text.trim(),
+        userId: user.id,
+        taskId: params.taskId,
+        projectId: params.projectId,
+      },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    }),
+    prisma.task.findUnique({
+      where: { id: params.taskId },
+      select: { title: true, assigneeId: true },
+    }),
+  ]);
+
+  // Notify assignee about the new comment (if not the commenter themselves)
+  if (task?.assigneeId && task.assigneeId !== user.id) {
+    await prisma.notification.create({
+      data: {
+        type: "COMMENT_ADDED",
+        message: `${user.name} оставил комментарий к задаче "${task.title}": "${text.trim().slice(0, 100)}"`,
+        userId: task.assigneeId,
+        taskId: params.taskId,
+      },
+    });
+  }
 
   return NextResponse.json(comment, { status: 201 });
 }

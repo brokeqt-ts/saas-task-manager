@@ -47,6 +47,11 @@ export default function SettingsPage() {
   }
 
   async function removeMember(userId: string) {
+    // Optimistic: remove from UI immediately
+    mutate(
+      (prev = []) => prev.filter((m) => m.userId !== userId),
+      { revalidate: false }
+    );
     await fetch(`/api/projects/${projectId}/members`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -56,6 +61,11 @@ export default function SettingsPage() {
   }
 
   async function changeRole(userId: string, role: Role) {
+    // Optimistic: update role in UI immediately
+    mutate(
+      (prev = []) => prev.map((m) => m.userId === userId ? { ...m, role } : m),
+      { revalidate: false }
+    );
     await fetch(`/api/projects/${projectId}/members`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -66,8 +76,9 @@ export default function SettingsPage() {
 
   async function deleteProject() {
     if (!confirm(t("project.deleteConfirm"))) return;
-    await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+    // Navigate immediately, don't wait for server
     router.replace("/dashboard");
+    fetch(`/api/projects/${projectId}`, { method: "DELETE" });
     router.refresh();
   }
 

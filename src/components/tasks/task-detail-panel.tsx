@@ -42,9 +42,7 @@ export function TaskDetailPanel({ task, members, projectId, onClose, onUpdate }:
   const [priority, setPriority] = useState<Priority>("MEDIUM");
   const [assigneeId, setAssigneeId] = useState<string>("");
   const [deadline, setDeadline] = useState("");
-  const [saving, setSaving] = useState(false);
   const [commentText, setCommentText] = useState("");
-  const [sendingComment, setSendingComment] = useState(false);
   const [activeTab, setActiveTab] = useState<"comments" | "history">("comments");
 
   const commentsKey = task ? `/api/projects/${projectId}/tasks/${task.id}/comments` : null;
@@ -69,21 +67,22 @@ export function TaskDetailPanel({ task, members, projectId, onClose, onUpdate }:
   if (!task) return null;
 
   async function save(fields: Partial<Record<string, unknown>>) {
-    setSaving(true);
-    await fetch(`/api/projects/${projectId}/tasks/${task!.id}`, {
+    // Fire-and-forget: update local state immediately (already done via setState),
+    // send to server in background, then revalidate
+    onUpdate(); // Optimistic revalidate of board SWR
+    fetch(`/api/projects/${projectId}/tasks/${task!.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(fields),
-    });
-    setSaving(false);
-    onUpdate();
+    }).then(() => onUpdate());
   }
 
   async function handleDelete() {
     if (!confirm(t("task.deleteConfirm"))) return;
-    await fetch(`/api/projects/${projectId}/tasks/${task!.id}`, { method: "DELETE" });
     onClose();
-    onUpdate();
+    onUpdate(); // Optimistic: close panel and refresh board immediately
+    fetch(`/api/projects/${projectId}/tasks/${task!.id}`, { method: "DELETE" })
+      .then(() => onUpdate());
   }
 
   function handleDeadlineBlur() {
@@ -93,14 +92,21 @@ export function TaskDetailPanel({ task, members, projectId, onClose, onUpdate }:
 
   async function sendComment() {
     if (!commentText.trim()) return;
-    setSendingComment(true);
+    const text = commentText.trim();
+    // Optimistic: add comment to list immediately
+    const optimisticComment: CommentItem = {
+      id: `temp-${Date.now()}`,
+      text,
+      createdAt: new Date().toISOString(),
+      user: { id: "", name: "...", email: "" },
+    };
+    setCommentText("");
+    mutateComments((prev = []) => [...prev, optimisticComment], { revalidate: false });
     await fetch(`/api/projects/${projectId}/tasks/${task!.id}/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: commentText.trim() }),
+      body: JSON.stringify({ text }),
     });
-    setCommentText("");
-    setSendingComment(false);
     mutateComments();
   }
 
@@ -115,7 +121,6 @@ export function TaskDetailPanel({ task, members, projectId, onClose, onUpdate }:
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <span className="text-sm font-semibold text-gray-900">{t("task.details")}</span>
           <div className="flex items-center gap-1">
-            {saving && <span className="text-xs text-gray-400">{t("task.saving")}</span>}
             <button onClick={handleDelete} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors">
               <TrashIcon className="w-4 h-4" />
             </button>
@@ -272,7 +277,7 @@ export function TaskDetailPanel({ task, members, projectId, onClose, onUpdate }:
                   />
                   <button
                     onClick={sendComment}
-                    disabled={sendingComment || !commentText.trim()}
+                    disabled={!commentText.trim()}
                     className="p-2 text-blue-600 hover:bg-blue-50 disabled:text-gray-300 rounded-lg transition-colors"
                   >
                     <PaperAirplaneIcon className="w-4 h-4" />

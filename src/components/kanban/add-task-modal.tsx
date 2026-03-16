@@ -23,13 +23,15 @@ export function AddTaskModal({ projectId, members, onClose, onCreated }: AddTask
   const [priority, setPriority] = useState<Priority>("MEDIUM");
   const [assigneeId, setAssigneeId] = useState("");
   const [deadline, setDeadline] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
 
   async function handleSubmit() {
     if (!title.trim()) return;
 
-    setLoading(true);
-    await fetch(`/api/projects/${projectId}/tasks`, {
+    // Close immediately, create in background
+    onClose();
+    onCreated();
+    fetch(`/api/projects/${projectId}/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -40,10 +42,7 @@ export function AddTaskModal({ projectId, members, onClose, onCreated }: AddTask
         assigneeId: assigneeId || undefined,
         deadline: deadline ? new Date(deadline).toISOString() : undefined,
       }),
-    });
-    setLoading(false);
-    onCreated();
-    onClose();
+    }).then(() => onCreated());
   }
 
   return (

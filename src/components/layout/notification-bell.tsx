@@ -12,7 +12,6 @@ export function NotificationBell() {
   const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  // -1 means "not yet initialized" — skip sound on first fetch (page load/navigation)
   const prevUnreadRef = useRef<number>(-1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -23,12 +22,8 @@ export function NotificationBell() {
         audioRef.current.volume = 0.5;
       }
       audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(() => {
-        // Browser may block sound until first interaction — ignore
-      });
-    } catch {
-      // Ignore audio errors
-    }
+      audioRef.current.play().catch(() => {});
+    } catch {}
   }, []);
 
   const { data: notifications = [], mutate } = useSWR<NotificationItem[]>(
@@ -37,7 +32,6 @@ export function NotificationBell() {
       refreshInterval: 30000,
       onSuccess(data) {
         const newUnread = data.filter((n) => !n.read).length;
-        // prevUnreadRef starts at -1: first fetch just records the baseline, no sound
         if (prevUnreadRef.current >= 0 && newUnread > prevUnreadRef.current) {
           playSound();
         }
@@ -57,6 +51,12 @@ export function NotificationBell() {
   }, []);
 
   async function markAllRead() {
+    // Optimistic: mark all as read immediately
+    prevUnreadRef.current = 0;
+    mutate(
+      (prev = []) => prev.map((n) => ({ ...n, read: true })),
+      { revalidate: false }
+    );
     await fetch("/api/notifications", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -66,6 +66,12 @@ export function NotificationBell() {
   }
 
   async function markOneRead(id: string) {
+    // Optimistic: mark this one as read immediately
+    prevUnreadRef.current = Math.max(0, prevUnreadRef.current - 1);
+    mutate(
+      (prev = []) => prev.map((n) => n.id === id ? { ...n, read: true } : n),
+      { revalidate: false }
+    );
     await fetch("/api/notifications", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

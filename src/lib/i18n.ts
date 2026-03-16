@@ -119,6 +119,19 @@ const en: Translations = {
   "notif.TASK_ASSIGNED": "📋 Task assigned",
   "notif.TASK_STATUS_CHANGED": "🔄 Status changed",
 
+  // My Tasks
+  "nav.myTasks": "My Tasks",
+  "myTasks.active": "Active",
+  "myTasks.completed": "Completed",
+  "myTasks.empty": "No tasks assigned to you",
+  "myTasks.project": "Project",
+  "myTasks.goToProject": "Go to project",
+  "myTasks.overdueHours": "Overdue by {hours}h",
+  "myTasks.overdueDays": "Overdue by {days}d",
+  "myTasks.lessThanHour": "Less than 1h",
+  "myTasks.hoursLeft": "{hours}h left",
+  "myTasks.daysLeft": "{days}d left",
+
   // Board
   "board.search": "Search tasks...",
   "board.allMembers": "All members",
@@ -261,6 +274,19 @@ const ru: Translations = {
   "notif.DEADLINE_APPROACHING": "⏰ Дедлайн приближается",
   "notif.TASK_ASSIGNED": "📋 Назначена задача",
   "notif.TASK_STATUS_CHANGED": "🔄 Статус изменён",
+
+  // My Tasks
+  "nav.myTasks": "Мои задачи",
+  "myTasks.active": "Активные",
+  "myTasks.completed": "Завершённые",
+  "myTasks.empty": "Нет назначенных задач",
+  "myTasks.project": "Проект",
+  "myTasks.goToProject": "Перейти в проект",
+  "myTasks.overdueHours": "Просрочено на {hours}ч",
+  "myTasks.overdueDays": "Просрочено на {days}д",
+  "myTasks.lessThanHour": "Менее 1ч",
+  "myTasks.hoursLeft": "Осталось {hours}ч",
+  "myTasks.daysLeft": "Осталось {days}д",
 
   // Board
   "board.search": "Поиск задач...",

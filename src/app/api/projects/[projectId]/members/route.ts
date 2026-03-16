@@ -44,6 +44,35 @@ export async function POST(req: Request, { params }: { params: { projectId: stri
   return NextResponse.json(member, { status: 201 });
 }
 
+export async function PATCH(req: Request, { params }: { params: { projectId: string } }) {
+  const user = await getCurrentUser();
+  const currentMember = await prisma.projectMember.findUnique({
+    where: { userId_projectId: { userId: user.id, projectId: params.projectId } },
+  });
+  if (!currentMember || currentMember.role !== "OWNER") {
+    return NextResponse.json({ error: "Только владелец может менять роли" }, { status: 403 });
+  }
+
+  const { userId, role } = await req.json();
+  if (!["ADMIN", "MEMBER"].includes(role)) {
+    return NextResponse.json({ error: "Недопустимая роль" }, { status: 400 });
+  }
+
+  const targetMember = await prisma.projectMember.findUnique({
+    where: { userId_projectId: { userId, projectId: params.projectId } },
+  });
+  if (!targetMember) return NextResponse.json({ error: "Участник не найден" }, { status: 404 });
+  if (targetMember.role === "OWNER") return NextResponse.json({ error: "Нельзя изменить роль владельца" }, { status: 400 });
+
+  const updated = await prisma.projectMember.update({
+    where: { userId_projectId: { userId, projectId: params.projectId } },
+    data: { role },
+    include: { user: { select: { id: true, name: true, email: true } } },
+  });
+
+  return NextResponse.json(updated);
+}
+
 export async function DELETE(req: Request, { params }: { params: { projectId: string } }) {
   const user = await getCurrentUser();
   const currentMember = await prisma.projectMember.findUnique({

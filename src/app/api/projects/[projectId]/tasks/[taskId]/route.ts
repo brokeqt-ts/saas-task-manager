@@ -118,6 +118,18 @@ export async function PATCH(req: Request, { params }: { params: { projectId: str
     },
   });
 
+  // Record status change history
+  if (statusChanged) {
+    await prisma.taskHistory.create({
+      data: {
+        oldStatus,
+        newStatus,
+        taskId: params.taskId,
+        userId: user.id,
+      },
+    });
+  }
+
   // Notifications
   const notificationsToCreate = [];
 
@@ -174,6 +186,11 @@ export async function DELETE(_req: Request, { params }: { params: { projectId: s
   const task = await prisma.task.findUnique({ where: { id: params.taskId } });
   if (!task || task.projectId !== params.projectId) {
     return NextResponse.json({ error: "Задача не найдена" }, { status: 404 });
+  }
+
+  // Only OWNER, ADMIN, or task creator can delete
+  if (member.role === "MEMBER" && task.creatorId !== user.id) {
+    return NextResponse.json({ error: "Недостаточно прав" }, { status: 403 });
   }
 
   await prisma.task.delete({ where: { id: params.taskId } });

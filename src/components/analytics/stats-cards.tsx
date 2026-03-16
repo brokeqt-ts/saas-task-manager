@@ -4,18 +4,20 @@ import { useLocale } from "@/components/providers/language-provider";
 
 interface StatsCardsProps {
   totalTasks: number;
+  myTasks: number;
   overdueTasks: number;
   completedThisWeek: number;
   activeProjects: number;
 }
 
-export function StatsCards({ totalTasks, overdueTasks, completedThisWeek, activeProjects }: StatsCardsProps) {
+export function StatsCards({ totalTasks, myTasks, overdueTasks, completedThisWeek, activeProjects }: StatsCardsProps) {
   const { t } = useLocale();
 
   const stats = [
     {
       label: t("stats.myTasks"),
-      value: totalTasks,
+      value: myTasks,
+      subLabel: t("stats.totalTasks", { count: totalTasks }),
       icon: "📋",
       color: "bg-blue-50 text-blue-600",
     },
@@ -48,6 +50,9 @@ export function StatsCards({ totalTasks, overdueTasks, completedThisWeek, active
           </div>
           <p className="text-2xl font-bold text-gray-900">{s.value}</p>
           <p className="text-sm text-gray-500 mt-0.5">{s.label}</p>
+          {"subLabel" in s && s.subLabel && (
+            <p className="text-xs text-gray-400 mt-0.5">{s.subLabel}</p>
+          )}
         </div>
       ))}
     </div>

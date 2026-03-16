@@ -69,6 +69,34 @@ export interface NotificationItem {
   taskId: string | null;
 }
 
+export interface CommentWithUser {
+  id: string;
+  text: string;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string;
+  taskId: string | null;
+  projectId: string | null;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export interface TaskHistoryWithUser {
+  id: string;
+  oldStatus: TaskStatus;
+  newStatus: TaskStatus;
+  createdAt: Date;
+  taskId: string;
+  userId: string;
+  user: {
+    id: string;
+    name: string;
+  };
+}
+
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   TODO: "К выполнению",
   IN_PROGRESS: "В работе",

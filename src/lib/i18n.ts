@@ -119,6 +119,28 @@ const en: Translations = {
   "notif.TASK_ASSIGNED": "📋 Task assigned",
   "notif.TASK_STATUS_CHANGED": "🔄 Status changed",
 
+  // Board
+  "board.search": "Search tasks...",
+  "board.allMembers": "All members",
+
+  // Comments
+  "comments.title": "Comments",
+  "comments.placeholder": "Write a comment...",
+  "comments.send": "Send",
+  "comments.empty": "No comments yet",
+  "comments.projectTitle": "Project Discussion",
+
+  // History
+  "history.title": "History",
+  "history.statusChange": "{name} changed status from {from} to {to}",
+  "history.empty": "No history yet",
+
+  // Stats
+  "stats.totalTasks": "Total: {count}",
+
+  // Roles
+  "roles.changeRole": "Change role",
+
   // Sign out
   "signout": "Sign out",
 };
@@ -239,6 +261,28 @@ const ru: Translations = {
   "notif.DEADLINE_APPROACHING": "⏰ Дедлайн приближается",
   "notif.TASK_ASSIGNED": "📋 Назначена задача",
   "notif.TASK_STATUS_CHANGED": "🔄 Статус изменён",
+
+  // Board
+  "board.search": "Поиск задач...",
+  "board.allMembers": "Все участники",
+
+  // Comments
+  "comments.title": "Комментарии",
+  "comments.placeholder": "Написать комментарий...",
+  "comments.send": "Отправить",
+  "comments.empty": "Комментариев пока нет",
+  "comments.projectTitle": "Обсуждение проекта",
+
+  // History
+  "history.title": "История",
+  "history.statusChange": "{name} изменил статус с {from} на {to}",
+  "history.empty": "История пуста",
+
+  // Stats
+  "stats.totalTasks": "Всего: {count}",
+
+  // Roles
+  "roles.changeRole": "Изменить роль",
 
   // Sign out
   "signout": "Выйти",

@@ -14,19 +14,25 @@ export default async function DashboardPage() {
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const [tasksByStatus, overdueTasks, completedThisWeek, activeProjects] = await Promise.all([
+  const memberFilter = { project: { members: { some: { userId: user.id } } } };
+
+  const [tasksByStatus, myTasksCount, overdueTasks, completedThisWeek, activeProjects] = await Promise.all([
     prisma.task.groupBy({
       by: ["status"],
-      where: {
-        project: { members: { some: { userId: user.id } } },
-      },
+      where: memberFilter,
       _count: true,
+    }),
+    prisma.task.count({
+      where: {
+        ...memberFilter,
+        OR: [{ assigneeId: user.id }, { creatorId: user.id }],
+      },
     }),
     prisma.task.findMany({
       where: {
         deadline: { lt: now },
         status: { not: "DONE" },
-        project: { members: { some: { userId: user.id } } },
+        ...memberFilter,
       },
       include: {
         project: { select: { id: true, name: true } },
@@ -40,7 +46,7 @@ export default async function DashboardPage() {
       where: {
         status: "DONE",
         updatedAt: { gte: weekAgo },
-        project: { members: { some: { userId: user.id } } },
+        ...memberFilter,
       },
     }),
     prisma.project.count({
@@ -49,7 +55,12 @@ export default async function DashboardPage() {
   ]);
 
   const totalTasks = tasksByStatus.reduce((sum, s) => sum + s._count, 0);
-  const statusData = tasksByStatus.map((s) => ({ status: s.status, _count: s._count }));
+  // Ensure all 4 statuses are always present for the chart
+  const statusMap = Object.fromEntries(tasksByStatus.map((s) => [s.status, s._count]));
+  const statusData = (["TODO", "IN_PROGRESS", "REVIEW", "DONE"] as const).map((status) => ({
+    status,
+    _count: statusMap[status] ?? 0,
+  }));
 
   return (
     <>
@@ -57,6 +68,7 @@ export default async function DashboardPage() {
       <main className="p-3 md:p-6 space-y-4 md:space-y-6">
         <StatsCards
           totalTasks={totalTasks}
+          myTasks={myTasksCount}
           overdueTasks={overdueTasks.length}
           completedThisWeek={completedThisWeek}
           activeProjects={activeProjects}

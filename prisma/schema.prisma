@@ -19,6 +19,8 @@ model User {
   assignedTasks  Task[]          @relation("TaskAssignee")
   createdTasks   Task[]          @relation("TaskCreator")
   notifications  Notification[]
+  comments       Comment[]
+  taskHistory    TaskHistory[]   @relation("TaskHistoryUser")
 }
 
 model Project {
@@ -32,6 +34,7 @@ model Project {
   owner       User            @relation("ProjectOwner", fields: [ownerId], references: [id])
   members     ProjectMember[]
   tasks       Task[]
+  comments    Comment[]
 }
 
 model ProjectMember {
@@ -68,9 +71,11 @@ model Task {
   assigneeId  String?
   creatorId   String
 
-  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assignee    User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  creator     User       @relation("TaskCreator", fields: [creatorId], references: [id])
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee    User?         @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  creator     User          @relation("TaskCreator", fields: [creatorId], references: [id])
+  comments    Comment[]
+  history     TaskHistory[]
 
   @@index([projectId, status])
   @@index([assigneeId])
@@ -89,6 +94,39 @@ enum Priority {
   MEDIUM
   HIGH
   URGENT
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  taskId    String?
+  projectId String?
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task      Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+  @@index([projectId, createdAt])
+}
+
+model TaskHistory {
+  id        String     @id @default(cuid())
+  oldStatus TaskStatus
+  newStatus TaskStatus
+  createdAt DateTime   @default(now())
+
+  taskId    String
+  userId    String
+
+  task      Task       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User       @relation("TaskHistoryUser", fields: [userId], references: [id])
+
+  @@index([taskId, createdAt])
 }
 
 model Notification {

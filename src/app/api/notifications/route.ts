@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getOptionalUser } from "@/lib/auth-utils";
 
-// In-memory cache: only run checkDeadlines once per 5 min per user
+// In-memory cache: only run checkDeadlines once per 1 min per user
 const checkCache = new Map<string, number>();
-const CHECK_INTERVAL_MS = 5 * 60 * 1000;
+const CHECK_INTERVAL_MS = 60 * 1000;
 
 export async function GET() {
   const user = await getOptionalUser();

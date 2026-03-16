@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import useSWR from "swr";
 import type { TaskWithRelations, MemberWithUser, TaskStatus, Priority } from "@/types";
-import { formatDate, formatDateTime, isOverdue, toMoscowInputValue, fromMoscowInputValue } from "@/lib/utils";
+import { formatDate, formatDateTime, isOverdue, toLocalInputValue, fromLocalInputValue } from "@/lib/utils";
 import { XMarkIcon, TrashIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 import { Avatar } from "@/components/ui/avatar";
 import { useLocale } from "@/components/providers/language-provider";
@@ -58,7 +58,7 @@ export function TaskDetailPanel({ task, members, projectId, onClose, onUpdate }:
       setStatus(task.status);
       setPriority(task.priority);
       setAssigneeId(task.assigneeId ?? "");
-      setDeadline(toMoscowInputValue(task.deadline));
+      setDeadline(toLocalInputValue(task.deadline));
       setCommentText("");
       setActiveTab("comments");
     }
@@ -86,7 +86,7 @@ export function TaskDetailPanel({ task, members, projectId, onClose, onUpdate }:
   }
 
   function handleDeadlineBlur() {
-    const isoDeadline = fromMoscowInputValue(deadline);
+    const isoDeadline = fromLocalInputValue(deadline);
     save({ deadline: isoDeadline });
   }
 

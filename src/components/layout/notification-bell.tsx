@@ -8,70 +8,77 @@ import type { NotificationItem } from "@/types";
 import { formatDateTime } from "@/lib/utils";
 import { useLocale } from "@/components/providers/language-provider";
 
+// Module-level state — survives component remounts (page navigation)
+// Only resets on full page refresh, which is correct behavior
+let prevUnreadCount = -1;
+let audioElement: HTMLAudioElement | null = null;
+let audioUnlocked = false;
+let mutating = false;
+
+function getAudio(): HTMLAudioElement {
+  if (!audioElement) {
+    audioElement = new Audio("/sounds/notification.wav");
+    audioElement.volume = 0.5;
+    audioElement.preload = "auto";
+  }
+  return audioElement;
+}
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  const audio = getAudio();
+  audio.volume = 0;
+  audio.play().then(() => {
+    audio.pause();
+    audio.currentTime = 0;
+    audio.volume = 0.5;
+    audioUnlocked = true;
+  }).catch(() => {});
+}
+
+function playNotificationSound() {
+  try {
+    const audio = getAudio();
+    audio.currentTime = 0;
+    audio.volume = 0.5;
+    audio.play().catch(() => {});
+  } catch {}
+}
+
 export function NotificationBell() {
   const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const prevUnreadRef = useRef<number>(-1);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioUnlockedRef = useRef(false);
-  const mutatingRef = useRef(false);
-
-  // Pre-create audio element on mount
-  useEffect(() => {
-    const audio = new Audio("/sounds/notification.wav");
-    audio.volume = 0.5;
-    audio.preload = "auto";
-    audioRef.current = audio;
-  }, []);
 
   // Unlock audio on first user interaction (browser autoplay policy)
   useEffect(() => {
-    function unlock() {
-      if (audioUnlockedRef.current) return;
-      const audio = audioRef.current;
-      if (audio) {
-        // Play silently to unlock
-        audio.volume = 0;
-        audio.play().then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-          audio.volume = 0.5;
-          audioUnlockedRef.current = true;
-        }).catch(() => {});
-      }
+    getAudio(); // pre-create
+    function handleInteraction() {
+      unlockAudio();
     }
-    document.addEventListener("click", unlock, { once: true });
-    document.addEventListener("touchstart", unlock, { once: true });
+    document.addEventListener("click", handleInteraction, { once: true });
+    document.addEventListener("touchstart", handleInteraction, { once: true });
     return () => {
-      document.removeEventListener("click", unlock);
-      document.removeEventListener("touchstart", unlock);
+      document.removeEventListener("click", handleInteraction);
+      document.removeEventListener("touchstart", handleInteraction);
     };
   }, []);
 
-  const playSound = useCallback(() => {
-    try {
-      const audio = audioRef.current;
-      if (!audio) return;
-      audio.currentTime = 0;
-      audio.volume = 0.5;
-      audio.play().catch(() => {});
-    } catch {}
+  const onSuccess = useCallback((data: NotificationItem[]) => {
+    if (mutating) return;
+    const newUnread = data.filter((n) => !n.read).length;
+    if (prevUnreadCount >= 0 && newUnread > prevUnreadCount) {
+      playNotificationSound();
+    }
+    prevUnreadCount = newUnread;
   }, []);
 
   const { data: notifications = [], mutate } = useSWR<NotificationItem[]>(
     "/api/notifications",
     {
       refreshInterval: 30000,
-      onSuccess(data) {
-        // Skip sound check if we're in the middle of an optimistic mutation
-        if (mutatingRef.current) return;
-        const newUnread = data.filter((n) => !n.read).length;
-        if (prevUnreadRef.current >= 0 && newUnread > prevUnreadRef.current) {
-          playSound();
-        }
-        prevUnreadRef.current = newUnread;
-      },
+      refreshWhenHidden: true, // Keep polling even when tab is in background
+      onSuccess,
     }
   );
 
@@ -86,9 +93,8 @@ export function NotificationBell() {
   }, []);
 
   async function markAllRead() {
-    // Optimistic: mark all as read immediately
-    mutatingRef.current = true;
-    prevUnreadRef.current = 0;
+    mutating = true;
+    prevUnreadCount = 0;
     mutate(
       (prev = []) => prev.map((n) => ({ ...n, read: true })),
       { revalidate: false }
@@ -98,17 +104,16 @@ export function NotificationBell() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ all: true }),
     });
-    mutatingRef.current = false;
+    mutating = false;
     const fresh = await mutate();
     if (fresh) {
-      prevUnreadRef.current = fresh.filter((n) => !n.read).length;
+      prevUnreadCount = fresh.filter((n) => !n.read).length;
     }
   }
 
   async function markOneRead(id: string) {
-    // Optimistic: mark this one as read immediately
-    mutatingRef.current = true;
-    prevUnreadRef.current = Math.max(0, prevUnreadRef.current - 1);
+    mutating = true;
+    prevUnreadCount = Math.max(0, prevUnreadCount - 1);
     mutate(
       (prev = []) => prev.map((n) => n.id === id ? { ...n, read: true } : n),
       { revalidate: false }
@@ -118,10 +123,10 @@ export function NotificationBell() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: [id] }),
     });
-    mutatingRef.current = false;
+    mutating = false;
     const fresh = await mutate();
     if (fresh) {
-      prevUnreadRef.current = fresh.filter((n) => !n.read).length;
+      prevUnreadCount = fresh.filter((n) => !n.read).length;
     }
   }
 

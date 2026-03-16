@@ -5,8 +5,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const TZ = "Europe/Moscow";
-
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "";
   const d = new Date(date);
@@ -14,7 +12,6 @@ export function formatDate(date: Date | string | null | undefined): string {
     day: "2-digit",
     month: "short",
     year: "numeric",
-    timeZone: TZ,
   });
 }
 
@@ -27,33 +24,21 @@ export function formatDateTime(date: Date | string | null | undefined): string {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: TZ,
   });
 }
 
-/** Convert UTC Date → "YYYY-MM-DDTHH:mm" string in Moscow time for datetime-local input */
-export function toMoscowInputValue(date: Date | string | null | undefined): string {
+/** Convert UTC Date → "YYYY-MM-DDTHH:mm" string in local system time for datetime-local input */
+export function toLocalInputValue(date: Date | string | null | undefined): string {
   if (!date) return "";
   const d = new Date(date);
-  // Format in Moscow timezone parts
-  const parts = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: TZ,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(d);
-  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
-  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/** Parse "YYYY-MM-DDTHH:mm" Moscow time → ISO string (UTC) for API */
-export function fromMoscowInputValue(value: string): string | null {
+/** Parse "YYYY-MM-DDTHH:mm" local time → ISO string (UTC) for API */
+export function fromLocalInputValue(value: string): string | null {
   if (!value) return null;
-  // Append Moscow offset (+03:00) so Date parses correctly
-  return new Date(`${value}+03:00`).toISOString();
+  return new Date(value).toISOString();
 }
 
 export function isOverdue(deadline: Date | string | null | undefined): boolean {

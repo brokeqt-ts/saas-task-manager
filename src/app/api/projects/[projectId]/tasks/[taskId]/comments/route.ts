@@ -29,32 +29,39 @@ export async function POST(req: Request, { params }: { params: { projectId: stri
   const { text } = await req.json();
   if (!text?.trim()) return NextResponse.json({ error: "Text required" }, { status: 400 });
 
-  const [comment, task] = await Promise.all([
-    prisma.comment.create({
-      data: {
-        text: text.trim(),
-        userId: user.id,
-        taskId: params.taskId,
-        projectId: params.projectId,
-      },
-      include: { user: { select: { id: true, name: true, email: true } } },
-    }),
-    prisma.task.findUnique({
-      where: { id: params.taskId },
-      select: { title: true, assigneeId: true },
-    }),
-  ]);
+  const task = await prisma.task.findUnique({
+    where: { id: params.taskId },
+    select: { title: true, assigneeId: true, creatorId: true },
+  });
 
-  // Notify assignee about the new comment (if not the commenter themselves)
-  if (task?.assigneeId && task.assigneeId !== user.id) {
-    await prisma.notification.create({
-      data: {
-        type: "COMMENT_ADDED",
-        message: `${user.name} оставил комментарий к задаче "${task.title}": "${text.trim().slice(0, 100)}"`,
-        userId: task.assigneeId,
-        taskId: params.taskId,
-      },
-    });
+  const comment = await prisma.comment.create({
+    data: {
+      text: text.trim(),
+      userId: user.id,
+      taskId: params.taskId,
+      projectId: params.projectId,
+    },
+    include: { user: { select: { id: true, name: true, email: true } } },
+  });
+
+  // Notify assignee and creator about the new comment (except the commenter)
+  if (task) {
+    const recipients = new Set<string>();
+    if (task.assigneeId && task.assigneeId !== user.id) recipients.add(task.assigneeId);
+    if (task.creatorId && task.creatorId !== user.id) recipients.add(task.creatorId);
+
+    if (recipients.size > 0) {
+      const commenterName = comment.user.name || user.email;
+      const preview = text.trim().slice(0, 100);
+      await prisma.notification.createMany({
+        data: Array.from(recipients).map((recipientId) => ({
+          type: "COMMENT_ADDED" as const,
+          message: `${commenterName} оставил комментарий к задаче "${task.title}": "${preview}"`,
+          userId: recipientId,
+          taskId: params.taskId,
+        })),
+      });
+    }
   }
 
   return NextResponse.json(comment, { status: 201 });
